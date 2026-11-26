@@ -7,6 +7,18 @@ type Contest = { contest_number: number; entrant_count: number }
 type DrawResult = { entry_id: string; contest_number: number; remaining: number }
 type FinalEntry = { school_name: string; contest_number: number }
 const initialContests = [1, 2, 3].map((contest_number) => ({ contest_number, entrant_count: 0 }))
+const schoolOptions = [
+  'Bomso Advent',
+  'Tweapease Pentecost',
+  'Asuom DGM',
+  'Asuom MA Model',
+  'Asuom Jasper Community School',
+  'Asuom Salvation Army',
+  'Asuom Presby',
+  'Asuom Roman Catholic',
+  'Asuom Islamic',
+  'Asuom New Ideal',
+]
 
 export default function App() {
   const [school, setSchool] = useState('')
@@ -212,7 +224,7 @@ export default function App() {
         <div className="entry-grid">
           <form className="entry-card" onSubmit={submit}>
             <label htmlFor="school">SCHOOL NAME</label>
-            <div className="input-wrap"><input id="school" value={school} onChange={(e) => setSchool(e.target.value)} placeholder="Enter your school name" maxLength={120} required disabled={loading || full} /><span className="input-index">ONE ENTRY<br />PER SCHOOL</span></div>
+            <div className="input-wrap"><select id="school" value={school} onChange={(e) => setSchool(e.target.value)} required disabled={loading || full}><option value="" disabled>Select your school</option>{schoolOptions.map((name) => <option key={name} value={name}>{name}</option>)}</select><span className="input-index">ONE ENTRY<br />PER SCHOOL</span></div>
             <div className="form-bottom"><span className="form-hint">Every school enters once.<br />Your contest is picked at random.</span><button type="submit" disabled={loading || full || !school.trim()}>{loading ? <><LoaderCircle className="spin" size={16} /> DRAWING…</> : full ? 'DRAW CLOSED' : <>DRAW MY CONTEST <ArrowUpRight size={16} /></>}</button></div>
             {error && <div className="error-message" role="alert">{error}</div>}
             {draw && <div className="result-message" role="status"><span className="result-check"><Check size={17} /></span><span><b>Contest {draw.contest_number}!</b> Your school is in the draw. Each school may enter once.</span><span className="result-number">0{draw.contest_number}</span></div>}
