@@ -194,7 +194,7 @@ export default function App() {
       <section className="hero" id="top">
         <div className="hero-copy">
           <h1>Science.<br />Maths.<br /><em>Computing.</em></h1>
-          <div className="subject-stamp"><Sparkles size={16} /> THE SCHOOL QUIZ</div>
+          <div className="subject-stamp"><Sparkles size={16} /> THE SMC QUIZ</div>
           <p className="hero-description">Enter your school in the Prime Media Consult 2026 Science Maths &amp; Computing Quiz draw and discover your contest number.</p>
           <div className="event-facts"><span><CalendarDays size={15} /> 16 &amp; 19 DECEMBER 2026</span><span><MapPin size={15} /> ASUOM CIRCUIT</span></div>
           <a className="scroll-cue" href="#entry"><span className="scroll-icon"><ArrowDown size={15} /></span> ENTER THE SCHOOL DRAW</a>
