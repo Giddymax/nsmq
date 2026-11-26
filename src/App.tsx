@@ -11,12 +11,11 @@ const schoolOptions = [
   'Bomso Advent',
   'Tweapease Pentecost',
   'Asuom DGM',
-  'Asuom MA Model',
   'Asuom Jasper Community School',
   'Asuom Salvation Army',
   'Asuom Presby',
   'Asuom Roman Catholic',
-  'Asuom Islamic',
+  'Tweapease Salvation Army',
   'Asuom New Ideal',
 ]
 
