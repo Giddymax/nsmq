@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowDown, ArrowUpRight, Check, CircleHelp, Download, LoaderCircle, MapPin, CalendarDays, RotateCcw, X } from 'lucide-react'
+import { ArrowDown, ArrowUpRight, Check, CircleHelp, Download, LoaderCircle, MapPin, CalendarDays } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { supabase } from './supabase'
 
@@ -20,6 +20,21 @@ const schoolOptions = [
   'Asuom New Ideal',
 ]
 
+async function loadPmcLogo() {
+  const response = await fetch('/prime-media-consult-logo.png')
+  if (!response.ok) throw new Error('Could not load the Prime Media Consult logo.')
+  const logoBlob = await response.blob()
+
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('Could not prepare the Prime Media Consult logo.'))
+    reader.onerror = () => reject(reader.error ?? new Error('Could not prepare the Prime Media Consult logo.'))
+    reader.readAsDataURL(logoBlob)
+  })
+}
+
 export default function App() {
   const [school, setSchool] = useState('')
   const [contests, setContests] = useState<Contest[]>(initialContests)
@@ -29,10 +44,6 @@ export default function App() {
   const [configured, setConfigured] = useState(Boolean(supabase))
   const [pdfLoading, setPdfLoading] = useState(false)
   const [pdfError, setPdfError] = useState('')
-  const [resetOpen, setResetOpen] = useState(false)
-  const [resetPassword, setResetPassword] = useState('')
-  const [resetLoading, setResetLoading] = useState(false)
-  const [resetError, setResetError] = useState('')
 
   async function refreshCounts() {
     if (!supabase) return
@@ -74,122 +85,161 @@ export default function App() {
     if (!supabase) return
     setPdfLoading(true)
     setPdfError('')
-    const { data, error: resultsError } = await supabase.rpc('get_final_draw_results')
-    setPdfLoading(false)
-    if (resultsError || !data || data.length !== 9) {
-      setPdfError('Final results are not available yet. Please refresh the page and try again.')
-      return
-    }
-
-    const entries = data as FinalEntry[]
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    pdf.setFillColor(7, 55, 110)
-    pdf.rect(0, 0, 210, 48, 'F')
-    pdf.setTextColor(255, 255, 255)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(10)
-    pdf.text('PRIME MEDIA CONSULT', 18, 17)
-    pdf.setFontSize(16)
-    pdf.text('2026 SCIENCE MATHS & COMPUTING QUIZ', 18, 29)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(10)
-    pdf.text('Official draw results  |  16 & 19 December 2026', 18, 39)
-
-    pdf.setTextColor(22, 62, 114)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(11)
-    pdf.text('OFFICIAL FINAL BALLOT', 18, 62)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(9)
-    pdf.setTextColor(95, 112, 139)
-    pdf.text('Nine schools · Three contests · Three schools per contest', 18, 69)
-
-    const startY = 82
-    const rowHeight = 13
-    pdf.setFillColor(236, 243, 250)
-    pdf.roundedRect(16, startY, 178, 12, 2, 2, 'F')
-    pdf.setTextColor(22, 62, 114)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setFontSize(9)
-    pdf.text('SCHOOL', 21, startY + 8)
-    pdf.text('CONTEST', 170, startY + 8)
-
-    let rowY = startY + 12
-    entries.forEach((entry, index) => {
-      const schoolLines = pdf.splitTextToSize(entry.school_name, 130)
-      const dynamicRowHeight = Math.max(rowHeight, schoolLines.length * 5 + 5)
-      const y = rowY
-      if (index % 2 === 0) {
-        pdf.setFillColor(250, 252, 255)
-        pdf.rect(16, y, 178, dynamicRowHeight, 'F')
+    try {
+      const { data, error: resultsError } = await supabase.rpc('get_final_draw_results')
+      if (resultsError || !data || data.length !== 9) {
+        setPdfError('Final results are not available yet. Please refresh the page and try again.')
+        return
       }
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(10)
-      pdf.setTextColor(31, 64, 112)
-      pdf.text(schoolLines, 21, y + 7)
+
+      const entries = data as FinalEntry[]
+      const logoData = await loadPmcLogo()
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+      const pageWidth = 297
+      const navy = [8, 53, 105] as const
+      const blue = [18, 91, 163] as const
+      const gold = [225, 171, 41] as const
+      const ink = [28, 52, 81] as const
+      const muted = [104, 122, 146] as const
+
+      pdf.setProperties({
+        title: 'Prime Media Consult 2026 SMC Quiz - Official Draw Results',
+        subject: 'Final school and contest assignments',
+        author: 'Prime Media Consult',
+      })
+
+      // Branded masthead and logo panel.
+      pdf.setFillColor(...navy)
+      pdf.rect(0, 0, pageWidth, 49, 'F')
+      pdf.setFillColor(...gold)
+      pdf.rect(0, 49, pageWidth, 2.2, 'F')
+      pdf.setFillColor(255, 255, 255)
+      pdf.roundedRect(13, 9, 68, 31, 3, 3, 'F')
+      const logoSize = pdf.getImageProperties(logoData)
+      const logoRatio = logoSize.width / logoSize.height
+      const logoWidth = Math.min(60, 27 * logoRatio)
+      const logoHeight = logoWidth / logoRatio
+      pdf.addImage(logoData, 'PNG', 17, 24.5 - logoHeight / 2, logoWidth, logoHeight)
+
+      pdf.setTextColor(235, 242, 250)
       pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(7, 86, 165)
-      pdf.text(`Contest ${entry.contest_number}`, 170, y + 8)
-      rowY += dynamicRowHeight
-    })
+      pdf.setFontSize(8)
+      pdf.text('OFFICIAL FINAL DRAW', 94, 13)
+      pdf.setDrawColor(...gold)
+      pdf.setLineWidth(0.8)
+      pdf.line(94, 17, 111, 17)
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFontSize(18)
+      pdf.text('SCIENCE, MATHS & COMPUTING QUIZ', 94, 27)
+      pdf.setTextColor(217, 229, 242)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(9)
+      pdf.text('PRIME MEDIA CONSULT 2026  |  16 & 19 DECEMBER 2026  |  ASUOM CIRCUIT', 94, 37)
+      pdf.setFillColor(...gold)
+      pdf.roundedRect(250, 12, 32, 10, 5, 5, 'F')
+      pdf.setTextColor(...navy)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(7)
+      pdf.text('DRAW CLOSED', 266, 18.5, { align: 'center' })
 
-    pdf.setDrawColor(190, 208, 229)
-    pdf.line(16, rowY + 5, 194, rowY + 5)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setFontSize(8)
-    pdf.setTextColor(102, 121, 146)
-    pdf.text('Asuom Circuit Schools · Asuom, Bomso & Tweapease', 16, rowY + 13)
-    pdf.text('Generated from the completed ballot', 16, rowY + 19)
-    pdf.save('prime-media-consult-2026-quiz-results.pdf')
-  }
+      // A compact summary band keeps the printout easy to scan.
+      pdf.setTextColor(...ink)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setFontSize(11)
+      pdf.text('FINAL RESULTS', 14, 64)
+      pdf.setTextColor(...muted)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(8)
+      pdf.text('Official school assignments by contest', 14, 70)
 
-  async function resetBallot(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!supabase) {
-      setResetError('Connect Supabase before resetting the ballot.')
-      return
-    }
-    setResetLoading(true)
-    setResetError('')
-    let code = ''
-    const { data, error: resetRequestError } = await supabase.functions.invoke('reset-ballot', {
-      body: { password: resetPassword },
-    })
-    if (resetRequestError) {
-      try {
-        const context = resetRequestError.context as {
-          clone?: () => { json?: () => Promise<{ error?: string }> }
-          json?: () => Promise<{ error?: string }>
-        }
-        const response = typeof context?.clone === 'function' ? context.clone() : context
-        if (typeof response?.json === 'function') code = (await response.json()).error ?? ''
-      } catch {
-        code = ''
+      const summaryY = 58
+      const summaryW = 42
+      const summaryGap = 4
+      const summaryStart = 145
+      const summaries = [
+        ['09', 'SCHOOLS'],
+        ['03', 'CONTESTS'],
+        ['03', 'PLACES EACH'],
+      ]
+      summaries.forEach(([count, label], index) => {
+        const x = summaryStart + index * (summaryW + summaryGap)
+        pdf.setFillColor(238, 245, 252)
+        pdf.roundedRect(x, summaryY, summaryW, 18, 2, 2, 'F')
+        pdf.setTextColor(...blue)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(12)
+        pdf.text(count, x + 5, summaryY + 8)
+        pdf.setTextColor(...muted)
+        pdf.setFontSize(6.5)
+        pdf.text(label, x + 15, summaryY + 8)
+      })
+
+      // Three equal cards put each contest and its three schools on one page.
+      const cardY = 82
+      const cardW = 85
+      const cardH = 110
+      const cardGap = 7
+      const cardStart = 14
+      for (let contestNumber = 1; contestNumber <= 3; contestNumber += 1) {
+        const cardX = cardStart + (contestNumber - 1) * (cardW + cardGap)
+        pdf.setFillColor(255, 255, 255)
+        pdf.setDrawColor(217, 228, 240)
+        pdf.setLineWidth(0.35)
+        pdf.roundedRect(cardX, cardY, cardW, cardH, 3, 3, 'FD')
+        pdf.setFillColor(...navy)
+        pdf.roundedRect(cardX, cardY, cardW, 20, 3, 3, 'F')
+        pdf.setFillColor(...blue)
+        pdf.rect(cardX, cardY + 15, cardW, 5, 'F')
+        pdf.setFillColor(...gold)
+        pdf.circle(cardX + 10, cardY + 10, 5, 'F')
+        pdf.setTextColor(...navy)
+        pdf.setFont('helvetica', 'bold')
+        pdf.setFontSize(9)
+        pdf.text(`0${contestNumber}`, cardX + 10, cardY + 13, { align: 'center' })
+        pdf.setTextColor(255, 255, 255)
+        pdf.setFontSize(12)
+        pdf.text(`CONTEST ${contestNumber}`, cardX + 19, cardY + 12)
+
+        const contestEntries = entries
+          .filter((entry) => entry.contest_number === contestNumber)
+          .sort((a, b) => a.school_name.localeCompare(b.school_name))
+        const rowTop = cardY + 24
+        const rowHeight = 27
+        contestEntries.forEach((entry, index) => {
+          const rowY = rowTop + index * rowHeight
+          if (index > 0) {
+            pdf.setDrawColor(228, 235, 243)
+            pdf.setLineWidth(0.25)
+            pdf.line(cardX + 6, rowY, cardX + cardW - 6, rowY)
+          }
+          pdf.setTextColor(...gold)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setFontSize(8)
+          pdf.text(`0${index + 1}`, cardX + 8, rowY + 12)
+          pdf.setTextColor(...ink)
+          pdf.setFont('helvetica', 'bold')
+          pdf.setFontSize(10)
+          const schoolLines = pdf.splitTextToSize(entry.school_name, cardW - 27)
+          pdf.text(schoolLines, cardX + 18, rowY + 9, { lineHeightFactor: 1.2 })
+        })
       }
-    } else {
-      code = data?.error ?? ''
-    }
-    setResetLoading(false)
 
-    if (resetRequestError || code) {
-      if (code === 'INCORRECT_PASSWORD') setResetError('That password is incorrect.')
-      else if (code === 'TOO_MANY_ATTEMPTS') setResetError('Too many attempts. Try again in 15 minutes.')
-      else if (code === 'RESET_NOT_CONFIGURED') setResetError('The Supabase reset function is not configured yet.')
-      else if (code === 'RESET_SCHEMA_NOT_APPLIED') setResetError('Run the latest supabase/schema.sql in the Supabase SQL Editor, then redeploy the reset-ballot function.')
-      else if (code === 'RESET_FAILED') setResetError('Supabase could not clear the entries. Check the reset-ballot function logs.')
-      else if (resetRequestError) setResetError('Could not reach the reset function. Confirm it is deployed and try again.')
-      else setResetError('The ballot could not be reset. Please try again.')
-      return
-    }
+      pdf.setDrawColor(214, 225, 238)
+      pdf.setLineWidth(0.35)
+      pdf.line(14, 199, 283, 199)
+      pdf.setTextColor(...muted)
+      pdf.setFont('helvetica', 'normal')
+      pdf.setFontSize(7)
+      pdf.text('PRIME MEDIA CONSULT  |  Promoting Education, Entertainment and More for The Future Children', 14, 204)
+      pdf.text('Asuom Circuit Schools', 283, 204, { align: 'right' })
 
-    setContests(initialContests)
-    setSchool('')
-    setDraw(null)
-    setError('')
-    setPdfError('')
-    setResetPassword('')
-    setResetOpen(false)
-    await refreshCounts()
+      pdf.save('prime-media-consult-2026-quiz-results.pdf')
+    } catch (error) {
+      console.error('Could not create final results PDF:', error)
+      setPdfError('We couldn’t prepare the PDF. Please try again.')
+    } finally {
+      setPdfLoading(false)
+    }
   }
 
   const total = contests.reduce((sum, contest) => sum + Number(contest.entrant_count), 0)
@@ -237,9 +287,7 @@ export default function App() {
 
       <section className="how-section" id="how-it-works"><div className="how-title"><div className="eyebrow"><span className="eyebrow-line" /> FAIR DRAW, BIG ENERGY</div><h2>How it works</h2><p>One school, one shot.<br />Let the draw decide.</p></div><div className="steps"><article className="step"><div className="step-number">01</div><div><h3>Enter your school</h3><p>Use your school’s full name. Each school may enter once.</p></div></article><article className="step"><div className="step-number">02</div><div><h3>Get a contest number</h3><p>The draw randomly assigns an open place in Contest 1, 2 or 3.</p></div></article><article className="step"><div className="step-number">03</div><div><h3>Get ready to shine</h3><p>Three schools can be assigned to each contest. See you in December!</p></div></article></div></section>
 
-      <footer className="footer"><a className="brand" href="#top" aria-label="Prime Media Consult home"><img className="brand-logo" src="/prime-media-consult-logo.png" alt="Prime Media Consult" /></a><span>SCIENCE · MATHS · COMPUTING · 2026</span><span className="footer-motto">Promoting Education, Entertainment and More for The Future Children</span><button type="button" className="reset-trigger" onClick={() => { setResetError(''); setResetOpen(true) }}><RotateCcw size={12} /> RESET BALLOT</button></footer>
-
-      {resetOpen && <div className="reset-backdrop"><section className="reset-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-title"><button className="reset-close" type="button" aria-label="Close reset dialog" onClick={() => setResetOpen(false)} disabled={resetLoading}><X size={18} /></button><div className="eyebrow"><span className="eyebrow-line" /> ADMIN ACTION</div><h2 id="reset-title">Reset the ballot?</h2><p>This clears all school entries and returns all three contests to zero. Enter the reset password to continue.</p><form onSubmit={resetBallot}><label htmlFor="reset-password">RESET PASSWORD</label><input id="reset-password" type="password" autoComplete="current-password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} required maxLength={128} autoFocus disabled={resetLoading} />{resetError && <div className="error-message" role="alert">{resetError}</div>}<div className="reset-actions"><button type="button" className="reset-cancel" onClick={() => { setResetOpen(false); setResetPassword('') }} disabled={resetLoading}>CANCEL</button><button type="submit" className="reset-confirm" disabled={resetLoading || !resetPassword}>{resetLoading ? <><LoaderCircle className="spin" size={15} /> RESETTING…</> : <><RotateCcw size={15} /> RESET BALLOT</>}</button></div></form></section></div>}
+      <footer className="footer"><a className="brand" href="#top" aria-label="Prime Media Consult home"><img className="brand-logo" src="/prime-media-consult-logo.png" alt="Prime Media Consult" /></a><span>SCIENCE · MATHS · COMPUTING · 2026</span><span className="footer-motto">Promoting Education, Entertainment and More for The Future Children</span></footer>
     </main>
   )
 }
