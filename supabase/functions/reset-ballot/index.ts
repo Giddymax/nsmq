@@ -57,16 +57,16 @@ Deno.serve(async (request) => {
     ?? request.headers.get("x-forwarded-for")?.split(",")[0].trim()
     ?? "unknown";
   const clientFingerprint = await fingerprint(clientAddress);
-  const { data: allowed, error: rateLimitError } = await supabase.rpc(
-    "consume_quiz_reset_attempt",
-    { p_client_fingerprint: clientFingerprint },
-  );
-  if (rateLimitError) {
-    console.error("Reset rate-limit schema is unavailable:", rateLimitError);
-    return jsonResponse({ error: "RESET_SCHEMA_NOT_APPLIED" }, 503);
-  }
-  if (!allowed) return jsonResponse({ error: "TOO_MANY_ATTEMPTS" }, 429);
   if (!constantTimeEqual(password, resetPassword)) {
+    const { data: allowed, error: rateLimitError } = await supabase.rpc(
+      "consume_quiz_reset_attempt",
+      { p_client_fingerprint: clientFingerprint },
+    );
+    if (rateLimitError) {
+      console.error("Reset rate-limit schema is unavailable:", rateLimitError);
+      return jsonResponse({ error: "RESET_SCHEMA_NOT_APPLIED" }, 503);
+    }
+    if (!allowed) return jsonResponse({ error: "TOO_MANY_ATTEMPTS" }, 429);
     return jsonResponse({ error: "INCORRECT_PASSWORD" }, 401);
   }
 
