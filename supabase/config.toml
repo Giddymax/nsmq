@@ -1,0 +1,2 @@
+[functions.reset-ballot]
+verify_jwt = false
