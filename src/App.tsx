@@ -102,7 +102,7 @@ export default function App() {
       const muted = [104, 122, 146] as const
 
       pdf.setProperties({
-        title: 'Prime Media Consult 2026 SMC Quiz - Official Draw Results',
+        title: 'Contest Draw Result',
         subject: 'Final school and contest assignments',
         author: 'Prime Media Consult',
       })
@@ -232,7 +232,7 @@ export default function App() {
       pdf.text('PRIME MEDIA CONSULT  |  Promoting Education, Entertainment and More for The Future Children', 14, 204)
       pdf.text('Asuom Circuit Schools', 283, 204, { align: 'right' })
 
-      pdf.save('prime-media-consult-2026-quiz-results.pdf')
+      pdf.save('contest-draw-result.pdf')
     } catch (error) {
       console.error('Could not create final results PDF:', error)
       setPdfError('We couldn’t prepare the PDF. Please try again.')
