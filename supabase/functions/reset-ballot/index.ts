@@ -61,17 +61,20 @@ Deno.serve(async (request) => {
     "consume_quiz_reset_attempt",
     { p_client_fingerprint: clientFingerprint },
   );
-  if (rateLimitError) return jsonResponse({ error: "RESET_NOT_CONFIGURED" }, 503);
+  if (rateLimitError) {
+    console.error("Reset rate-limit schema is unavailable:", rateLimitError);
+    return jsonResponse({ error: "RESET_SCHEMA_NOT_APPLIED" }, 503);
+  }
   if (!allowed) return jsonResponse({ error: "TOO_MANY_ATTEMPTS" }, 429);
   if (!constantTimeEqual(password, resetPassword)) {
     return jsonResponse({ error: "INCORRECT_PASSWORD" }, 401);
   }
 
-  const { error: deleteError } = await supabase
-    .from("quiz_entries")
-    .delete()
-    .gte("created_at", "1970-01-01T00:00:00.000Z");
-  if (deleteError) return jsonResponse({ error: "RESET_FAILED" }, 500);
+  const { error: resetError } = await supabase.rpc("reset_quiz_entries");
+  if (resetError) {
+    console.error("Could not reset quiz entries:", resetError);
+    return jsonResponse({ error: "RESET_SCHEMA_NOT_APPLIED" }, 503);
+  }
 
   await supabase
     .from("quiz_reset_attempts")

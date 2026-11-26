@@ -155,3 +155,22 @@ $$;
 
 revoke all on function public.consume_quiz_reset_attempt(text) from public, anon, authenticated;
 grant execute on function public.consume_quiz_reset_attempt(text) to service_role;
+
+-- Restrict ballot deletion to the trusted reset Edge Function.
+create or replace function public.reset_quiz_entries()
+returns integer
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  removed_entries integer;
+begin
+  delete from public.quiz_entries;
+  get diagnostics removed_entries = row_count;
+  return removed_entries;
+end;
+$$;
+
+revoke all on function public.reset_quiz_entries() from public, anon, authenticated;
+grant execute on function public.reset_quiz_entries() to service_role;

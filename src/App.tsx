@@ -145,8 +145,12 @@ export default function App() {
     })
     if (resetRequestError) {
       try {
-        const response = resetRequestError.context
-        if (response instanceof Response) code = (await response.json()).error ?? ''
+        const context = resetRequestError.context as {
+          clone?: () => { json?: () => Promise<{ error?: string }> }
+          json?: () => Promise<{ error?: string }>
+        }
+        const response = typeof context?.clone === 'function' ? context.clone() : context
+        if (typeof response?.json === 'function') code = (await response.json()).error ?? ''
       } catch {
         code = ''
       }
@@ -159,6 +163,9 @@ export default function App() {
       if (code === 'INCORRECT_PASSWORD') setResetError('That password is incorrect.')
       else if (code === 'TOO_MANY_ATTEMPTS') setResetError('Too many attempts. Try again in 15 minutes.')
       else if (code === 'RESET_NOT_CONFIGURED') setResetError('The Supabase reset function is not configured yet.')
+      else if (code === 'RESET_SCHEMA_NOT_APPLIED') setResetError('Run the latest supabase/schema.sql in the Supabase SQL Editor, then redeploy the reset-ballot function.')
+      else if (code === 'RESET_FAILED') setResetError('Supabase could not clear the entries. Check the reset-ballot function logs.')
+      else if (resetRequestError) setResetError('Could not reach the reset function. Confirm it is deployed and try again.')
       else setResetError('The ballot could not be reset. Please try again.')
       return
     }
